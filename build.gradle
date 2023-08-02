@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.hz.yk'
-version '1.0'
+version '1.1'
 
 repositories {
     mavenCentral()
@@ -31,6 +31,8 @@ patchPluginXml {
     //最高支持的版本，不能不设置，不设置是默认为 project.version
     untilBuild ''
     changeNotes """
+      1.1版本.<br>
+      优化：根据返回对象的字段生成set方法.<br>
       1.0版本.<br>
       主要是为了处理GenerateO2O因createBlock方法报NPE问题无法使用问题.<br>
       """

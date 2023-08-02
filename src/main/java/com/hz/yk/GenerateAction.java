@@ -8,6 +8,7 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiCodeBlock;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementFactory;
@@ -21,11 +22,15 @@ import com.intellij.psi.PsiType;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.CollectionListModel;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 /**
  * @author wuzheng.yk
@@ -52,7 +57,7 @@ public class GenerateAction extends AnAction {
         final String codeBlockStr = getCodeBlockStr(psiElement);
         if (codeBlockStr == null) {
             return;
-        } 
+        }
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiElement.getProject());
         final PsiCodeBlock newCodeBlock = elementFactory.createCodeBlockFromText(codeBlockStr, psiElement);
         final PsiCodeBlock psiCodeBlock = getPsiCodeBlock(psiElement);
@@ -75,6 +80,7 @@ public class GenerateAction extends AnAction {
         if (returnType == null) {
             return null;
         }
+        List<PsiField> returnFields = this.getReturnFields(returnType);
         String returnClassName = returnType.getPresentableText();
         PsiParameter psiParameter = psiMethod.getParameterList().getParameters()[0];
         //带package的class名称
@@ -89,7 +95,18 @@ public class GenerateAction extends AnAction {
 
         //把原来的getFields 替换成getAllFields ，支持父类的field
         List<PsiField> parameterFields = new CollectionListModel<>(parameterClass.getAllFields()).getItems();
-        return new MethodInfo(methodName, returnClassName, psiParameter, parameterFields);
+        return new MethodInfo(methodName, returnClassName, returnFields, psiParameter, parameterFields);
+    }
+
+    private List<PsiField> getReturnFields(PsiType returnType) {
+        if (returnType instanceof PsiClassType) {
+            PsiClassType classType = (PsiClassType) returnType;
+            PsiClass psiClass = classType.resolve();
+            if (psiClass != null) {
+                return Arrays.asList(psiClass.getFields());
+            }
+        }
+        return Collections.emptyList();
     }
 
     /**
@@ -109,21 +126,33 @@ public class GenerateAction extends AnAction {
         builder.append("{\n if ( ").append(parameterName).append("== null ){\n").append("return null;\n}")
                 .append(returnClassName).append(" ").append(returnObjName).append("= new ").append(returnClassName)
                 .append("();\n");
-        for (PsiField field : methodInfo.getParamentFields()) {
-            PsiModifierList modifierList = field.getModifierList();
-            if (modifierList == null || modifierList.hasModifierProperty(PsiModifier.STATIC) || modifierList
-                    .hasModifierProperty(PsiModifier.FINAL) || modifierList
-                        .hasModifierProperty(PsiModifier.SYNCHRONIZED)) {
-                continue;
-            }
-            builder.append(returnObjName).append(".set").append(getFirstUpperCase(field.getName())).append("(")
-                    .append(parameterName).append(".get").append(getFirstUpperCase(field.getName())).append("());\n");
+        if (CollectionUtils.isEmpty(methodInfo.getReturnFields())) {
+            return builder.toString();
         }
+        Set<String> parameterFieldSet = methodInfo.getParameterFields().stream().map(PsiField::getName).collect(Collectors.toSet());
+        for (PsiField field : methodInfo.getReturnFields()) {
+            builder.append(returnObjName).append(".set").append(getFirstUpperCase(field.getName())).append("(");
+            if (parameterFieldSet.contains(field.getName())) {
+                PsiModifierList modifierList = field.getModifierList();
+                if (modifierList == null || modifierList.hasModifierProperty(PsiModifier.STATIC) || modifierList
+                        .hasModifierProperty(PsiModifier.FINAL) || modifierList
+                        .hasModifierProperty(PsiModifier.SYNCHRONIZED)) {
+                    continue;
+                }
+                builder.append(parameterName).append(".get").append(getFirstUpperCase(field.getName())).append("()");
+            }
+            builder.append(");\n");
+        }
+
         builder.append("return ").append(returnObjName).append(";\n}");
         return builder.toString();
     }
 
     private String getFirstUpperCase(String oldStr) {
+        boolean startWithIs = oldStr.matches("is[A-Z].*");
+        if (startWithIs) {
+            return oldStr.substring(2);
+        }
         return oldStr.substring(0, 1).toUpperCase() + oldStr.substring(1);
     }
 
