@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>simple-zhang</id>
-    <name>GenerateO2O</name>
-    <vendor email="1754325487@qq.com" url="">hipac</vendor>
+    <name>GenerateO2O-Plus</name>
+    <vendor email="1754325487@qq.com" url="">simple-zhang</vendor>
 
     <description><![CDATA[This plugin can generate an Object to another Object transfer methods.  <br>]]></description>
 
