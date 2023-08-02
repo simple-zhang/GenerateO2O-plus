@@ -149,10 +149,6 @@ public class GenerateAction extends AnAction {
     }
 
     private String getFirstUpperCase(String oldStr) {
-        boolean startWithIs = oldStr.matches("is[A-Z].*");
-        if (startWithIs) {
-            return oldStr.substring(2);
-        }
         return oldStr.substring(0, 1).toUpperCase() + oldStr.substring(1);
     }
 
