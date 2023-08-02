@@ -17,7 +17,7 @@
     <idea-version since-build="201"/>
     <actions>
         <!-- Add your actions here -->
-        <action id="generateO2O" class="com.hz.yk.GenerateAction" text="GenerateO2O" description="auto generates O2O">
+        <action id="generateO2O" class="com.hz.yk.GenerateAction" text="GenerateO2O-Plus" description="auto generates O2O plus">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
     </actions>
