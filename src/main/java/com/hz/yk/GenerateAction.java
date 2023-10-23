@@ -22,8 +22,7 @@ import com.intellij.psi.PsiType;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.CollectionListModel;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -99,14 +98,44 @@ public class GenerateAction extends AnAction {
     }
 
     private List<PsiField> getReturnFields(PsiType returnType) {
+        List<PsiField> fields = new ArrayList<>();
+
         if (returnType instanceof PsiClassType) {
             PsiClassType classType = (PsiClassType) returnType;
             PsiClass psiClass = classType.resolve();
-            if (psiClass != null) {
-                return Arrays.asList(psiClass.getFields());
+
+            while (psiClass != null) {
+                for (PsiField field : psiClass.getFields()) {
+                    if (hasSetterMethod(psiClass, field)) {
+                        fields.add(field);
+                    }
+                }
+
+                psiClass = psiClass.getSuperClass();
             }
         }
-        return Collections.emptyList();
+
+        return fields;
+    }
+
+    private boolean hasSetterMethod(PsiClass psiClass, PsiField field) {
+        String setterName = "set" + capitalizeFirstLetter(field.getName());
+
+        for (PsiMethod method : psiClass.getMethods()) {
+            if (setterName.equals(method.getName())
+                    && method.getParameterList().getParametersCount() == 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private String capitalizeFirstLetter(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return Character.toUpperCase(str.charAt(0)) + str.substring(1);
     }
 
     /**
